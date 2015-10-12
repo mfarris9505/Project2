@@ -6,14 +6,13 @@ output:
   html_document:
     toc: true
 ---
-# Does the Power of the Pope Make Me a Better Player? 
+# Does the Popularity of the Pope Make People Better Players? 
 
-For this assignment, I decided to go a little off the beaten path. As we are still in the introduction of data acquistion, and these Projects are more to help build a basis for our future understanding of data management,  I feel we can still create solid data and code that highlights a way of extracting data, while still having a little fun. I wanted to focus on rvest in the project, so I took the two data sets from Sanjive Kumar on Brazil's Footbal Team, and the Motocross data from Maxwell Wagner. I also noticed that the data for the Pope's Popularity by Andrew Goldberg was an interesting choice, not exactly like the other data, but an opportunity to compare data. I thought it would be fun to play around with this and maybe to answer the question:  Is there any correlation, between the Pope's Popularity and a Team's winning streak? 
+For this assignment, I decided to go a little off the beaten path. As we are still in the introduction of data acquistion, and these Projects are more to help build a basis for our future understanding of data management,  I felt we can still create solid data and code that highlights a way of extracting data, while still having a little fun. I wanted to focus on rvest, tidyr and dplyr packages in this project. I tried to stick with one of these three packages for the most part to do any of the necessary cleanning (though I did rely on some base R for the basic). I took the data sets from Sanjive Kumar on Brazil's Football Team, and the Motocross data from Maxwell Wagner. These were the sets of data I could easily extract using the rvest package. I also noticed that the data for the Pope's Popularity by Andrew Goldberg was an interesting choice, not exactly like the other data, but I thought it might present an opportunity to compare data. It would be fun to play around with this and maybe to answer the question:  Is there any correlation, between the Pope's Popularity and a Team's winning streak? 
 
 
 ## Data Extraction
 
-For the first part of this project, we extrackted the necessary data an created 
 ```{r}
 #Initializing Packages
 library(rvest)
@@ -31,7 +30,7 @@ The reason I primaily picked the Motocross and FIFA data was because it was from
 
 http://www.r-bloggers.com/using-rvest-to-scrape-an-html-table/   
 
-This one set of code requires one to inspect the elements of a webpage and locate the specific path in the source code. I like this way particularly, as it allows for to extract the dataset directly from the site. No need to create a csv file in another program. So, the extracted data looks as follows: 
+This one set of code requires one to inspect the elements of a webpage and locate the specific path in the source code. I like this in particular, as it allows one to extract the dataset directly from the site. No need to create a csv file in another program. So, the extracted data looks as follows: 
 
 
 ```{r}
@@ -60,9 +59,10 @@ WC_Brazil <- WC_Brazil[-21,]
 Now we have a cleaner data frame that we can work with, but there is still some tidying that needs to be done. First, the data that we are going to primarily work with in this data set is the final position. However, this is a none numeric value, so tidyr can be used to extact this data: 
 
 ```{r}
-
+# I found while running the data, some of these values were not"numeric" However this extract numeric coerced them into a numeric value, so I pushed the values I needed using this function
 WC_Brazil$Position <- extract_numeric(WC_Brazil$Position)
-
+WC_Brazil$Goals <- extract_numeric(WC_Brazil$Goals)
+WC_Brazil$Played <- extract_numeric(WC_Brazil$Played)
 head(WC_Brazil)
 ```
 
@@ -98,7 +98,7 @@ head(MC_Total)
 
 ### Pope Popularity 
 
-For the Pope's Popularity, unfortunately, the data was in an image file. At the moment, I was unable to extract the info into a reasonable group. So I created a CSV file in the format of the data presented on the Discussion board. I kept the CSV to the format as best I could, but for simplicity I did change things a bit (I realize that this Project is to aid our knowledge of tidying data, but some things especially in a .csv file are easier to manipulate in the file itself). I tried to use each of these datasets to emphasize a particular extraction and data manipulation, for this one I used some regular expressions to extract a particular item in the file. 
+For the Pope's Popularity, unfortunately, the data was in an image file. At the moment, I was unable to extract the info from the website. So, I created a CSV file in the format of the data presented on the Discussion board. I kept the CSV to the format as best I could, but for simplicity I did change things a bit (I realize that this Project is to aid our knowledge of tidying data, but some things especially when creating .csv file are easier to manipulate in the file itself). I tried to use each of these datasets to emphasize a particular extraction and data manipulation, for this one I used some regular expressions to extract a particular item in the file. 
 
 ```{r}
 #Extracting the URL text 
@@ -126,22 +126,45 @@ head(pope_data)
 Now that we have all the data in a group we can do some analysis.
 
 ## Results and Analysis 
-For the analysis, I did the bare minimum that was requested for the two threads (Motocross and Pope data), which is shown below. For the World Cup data and Motocross data, I created two datasets and combined it with Favorability of the Pope during the given years. For the Motocross data, I picked 4 countries specifically USA, Japan, Ireland, and Brazil 
+For the analysis, I did the bare minimum that was requested for the two threads (Motocross and Pope data), which is shown below. For the World Cup data and Motocross data, I created two datasets and combined it with Favorability of the Pope during the given years. For the Motocross data, I picked 4 countries specifically USA, Japan, Ireland, and Brazil. 
 
 
 ### Thread Analysis
 
-As stated, I couldn't quite extract the data for the opponents, so I did some generic plotting. First, I was interested in see if the number of goals scored vs. the position that Brazil made it too. This was accomplished as follows:  
+As stated, I couldn't quite extract the data for the opponents, so I did some generic plotting. First, I was interested in see if the number of goals scored was related to the position they placed. This was accomplished as follows:
 
-The motocross data was interesting to look at, and using dplyr we came to some interesting finds. First the average placement of each country: 
+```{r}
+ggplot(WC_Brazil, aes(x=Goals, y=Position))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+I realize, this data is actually quite obvious. They would score more goals, mostly because they played more games, so I tried to optimize this by creating a sepatate column called Goals Per Game:
+
+```{r}
+WC_Brazil <- WC_Brazil %>% mutate(GoalsPerGame = Goals/Played)
+```
+
+```{r}
+ggplot(WC_Brazil, aes(x=GoalsPerGame, y=Position))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+The replotted data shows a more acuarte depiction if there is a relation between Goals Scored and Placement. 
+
+####Next we did some analysis on the Motocross data:
+
+The motocross data was interesting to look at and using dplyr we came to some interesting finds. First the average placement of each country: 
 
 ```{r}
 MC_Total %>% group_by(Team)  %>% 
   summarise(Mean = mean(Place))
 
-
-
 ```
+
+
+####Finally some analysis on the Pope data: 
 
 For the Pope dataset, I created two new Columns using the Mutate function, one to obtain what he called Awareness, and the other as Net Favoablility:
 
@@ -189,11 +212,36 @@ combo_data <- left_join(combo_data,MC_USA, by = "Year")
 combo_data <- left_join(combo_data,MC_Ireland, by = "Year")
 combo_data <- left_join(combo_data,MC_Brazil, by = "Year")
 
-names(combo_data) <- c("Year","Favorable","Brazil WC","Japan MC","USA MC","Ireland MC", "Brazil MC")
+names(combo_data) <- c("Year","Favorable","Brazil_WC","Japan_MC","USA_MC","Ireland_MC", "Brazil_MC")
 
 combo_data
 ```
 
-After all that... We successfully found absolutely nothing... I was going to plot this in a graph to determine if there was some correlation (ie. Favorability vs. Place), but frankly the dataset is a bit to sparse to do that. Furthermore, looking at the data, one can easily see that their is no relationship. However, for the sake of argument, we did plot the data for Ireland, as it looked promising: 
+After all that... We successfully found absolutely nothing... First, this data makes several assumptions, like the favoribilty of the Pope in America is representative of the entire world (obviously not). However, for the sake of argument, I did plot the data for Ireland, as it looked promising, and Ireland is known for its connection to the Catholic Church (71% Catholic): 
+
+```{r}
+ggplot(combo_data, aes(x=Ireland_MC, y=Favorable))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+This data was actually surprising, There does appear to be a slight trend, that shows that as the people's favor of the Pope goes down, so does the relative ranking of Ireland.
+
+A similar plot was done using the World Cup data, as Brazil is another Catholic country (64% Catholic): 
+
+```{r}
+ggplot(combo_data, aes(x=Brazil_WC, y=Favorable))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
 
 
+Finally, we plotted Japan, Which we know isn't catholic (according to my research only 0.5% of the popluation is a practicing catholic).
+
+```{r}
+ggplot(combo_data, aes(x=Japan_MC, y=Favorable))+
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+Though this analysis is FAR from accurate, it is interesting to say the least. I am still not familiar with many statistical test, but the fact that I found any sort of trend is just flat out strange. I felt I would find absolutely no change, like we see in the data set from Japan. Again, I can't say this anything other than a coincidence, but it is a pleasant surprise for me. I do admire Pope Francis, and was generally pleased with his recent appearance here in America, as I think he did speak on many topics, and inspired many by his speeches. Maybe, just maybe, I should try out for the soccer team. 
